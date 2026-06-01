@@ -14,6 +14,7 @@ interface DayState {
   practice: Record<string, Practice>;
   rcPassages: number;
   vaDrills: number;
+  diSets: number;
   lr: { setsDone: number; avgTimePerSet: number; accuracy: number };
   errorsLogged: number;
   errorsRevised: number;
@@ -38,6 +39,7 @@ function blank(date: string): DayState {
     practice: Object.fromEntries(TAGS.map((t) => [t, { attempted: 0, correct: 0 }])),
     rcPassages: 0,
     vaDrills: 0,
+    diSets: 0,
     lr: { setsDone: 0, avgTimePerSet: 0, accuracy: 0 },
     errorsLogged: 0,
     errorsRevised: 0,
@@ -335,6 +337,10 @@ export default function DailyPage() {
               <input type="number" className="input" value={day.vaDrills}
                 onChange={(e) => set({ vaDrills: num(e.target.value) })} />
             </Field>
+            <Field label="DI sets done">
+              <input type="number" className="input" value={day.diSets}
+                onChange={(e) => set({ diSets: num(e.target.value) })} />
+            </Field>
             <Field label="New errors logged">
               <input type="number" className="input" value={day.errorsLogged}
                 onChange={(e) => set({ errorsLogged: num(e.target.value) })} />
@@ -370,6 +376,10 @@ export default function DailyPage() {
 
       {/* Practice by area */}
       <Panel title="Questions attempted & correct, by area">
+        <p className="mb-3 text-xs text-slate-500">
+          This is your <span className="text-slate-300">accuracy</span> tracker (always per-question). Volume is counted in each area&apos;s
+          natural unit elsewhere — <span className="text-lr">LR</span> &amp; <span className="text-dilr">DI</span> in sets, RC in passages, VA in drills, QA in questions.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {TAGS.map((t) => {
             const p = day.practice[t];
@@ -403,7 +413,7 @@ export default function DailyPage() {
         }
       >
         <p className="mb-3 text-xs text-slate-500">
-          Anything you did outside the planned blocks. It rolls into the same area accuracy, LR-set counts and topic tracker as your planned work — so nothing is tracked separately.
+          Anything you did outside the planned blocks. It rolls into the same volume totals and topic tracker as planned work — DI/LR count as <span className="text-slate-300">sets</span>, RC as passages, VA as drills, QA as questions (QA also feeds accuracy).
         </p>
         {day.extraWork.length === 0 ? (
           <p className="text-sm text-slate-500">Nothing extra logged yet.</p>
@@ -411,7 +421,8 @@ export default function DailyPage() {
           <div className="space-y-2">
             {day.extraWork.map((e, i) => {
               const a = e.attempted ? Math.round((e.correct / e.attempted) * 100) : 0;
-              const unit = e.category === "LR" || e.category === "DI" ? "Sets" : "Questions";
+              const unit =
+                e.category === "LR" || e.category === "DI" ? "Sets" : e.category === "RC" ? "Passages" : e.category === "VA" ? "Drills" : "Questions";
               return (
                 <div key={i} className="rounded-xl border border-line bg-panel2 p-3">
                   <div className="grid items-end gap-2 sm:grid-cols-12">

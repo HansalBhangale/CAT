@@ -39,8 +39,9 @@ const DailyLogSchema = new Schema(
       DI: { type: PracticeSchema, default: () => ({}) },
       LR: { type: PracticeSchema, default: () => ({}) },
     },
-    rcPassages: { type: Number, default: 0 },
+    rcPassages: { type: Number, default: 0 }, // RC volume = passages
     vaDrills: { type: Number, default: 0 },
+    diSets: { type: Number, default: 0 }, // DI volume = sets (mirrors lr.setsDone)
     lr: {
       setsDone: { type: Number, default: 0 },
       avgTimePerSet: { type: Number, default: 0 }, // minutes

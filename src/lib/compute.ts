@@ -5,8 +5,9 @@ export interface DailyLog {
   phase: string;
   hoursActual: number;
   practice: Record<string, { attempted: number; correct: number }>;
-  rcPassages: number;
+  rcPassages: number; // RC volume unit = passages (a passage is RC's "set")
   vaDrills: number;
+  diSets: number; // DI volume unit = sets (mirrors LR)
   lr: { setsDone: number; avgTimePerSet: number; accuracy: number };
   errorsLogged: number;
   errorsRevised: number;
@@ -62,11 +63,13 @@ export function sumPractice(logs: DailyLog[]) {
         t[k].correct += p.correct || 0;
       }
     }
-    // extra work counts toward the same area totals
+    // Extra work feeds question-accuracy only for QA (its volume unit is questions).
+    // DI/LR (sets), RC (passages) and VA (drills) are container units — they feed
+    // volume totals (see totalDiSets/totalLrSets/totalRc/totalVa), not question accuracy.
     for (const e of l.extraWork || []) {
-      if ((TAGS as readonly string[]).includes(e.category)) {
-        t[e.category].attempted += e.attempted || 0;
-        t[e.category].correct += e.correct || 0;
+      if (e.category === "QA") {
+        t.QA.attempted += e.attempted || 0;
+        t.QA.correct += e.correct || 0;
       }
     }
   }
@@ -87,11 +90,24 @@ export function totalLrSets(logs: DailyLog[]) {
   );
 }
 
+// Sum of "attempted" from extra-work rows of a given area (its volume-unit count).
+function extraVol(logs: DailyLog[], category: string) {
+  return logs.reduce(
+    (s, l) => s + (l.extraWork || []).filter((e) => e.category === category).reduce((a, e) => a + (e.attempted || 0), 0),
+    0
+  );
+}
+
+// DI volume = sets (planned diSets + extra DI sets) — mirrors totalLrSets.
+export function totalDiSets(logs: DailyLog[]) {
+  return logs.reduce((s, l) => s + (l.diSets || 0), 0) + extraVol(logs, "DI");
+}
+
 export function totalRc(logs: DailyLog[]) {
-  return logs.reduce((s, l) => s + (l.rcPassages || 0), 0);
+  return logs.reduce((s, l) => s + (l.rcPassages || 0), 0) + extraVol(logs, "RC");
 }
 export function totalVa(logs: DailyLog[]) {
-  return logs.reduce((s, l) => s + (l.vaDrills || 0), 0);
+  return logs.reduce((s, l) => s + (l.vaDrills || 0), 0) + extraVol(logs, "VA");
 }
 export function totalExtraMin(logs: DailyLog[]) {
   return logs.reduce((s, l) => s + (l.extraWork || []).reduce((a, e) => a + (e.minutes || 0), 0), 0);

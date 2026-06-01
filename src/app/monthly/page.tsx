@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { jget, jpost } from "@/lib/api";
 import { Panel, Progress, StatCard, Empty, TopicsCovered } from "@/components/Ui";
-import { DailyLog, Mock, ErrLog, totalHours, totalLrSets, sumPractice, acc, topicsFromLogs } from "@/lib/compute";
+import { DailyLog, Mock, ErrLog, totalHours, totalLrSets, totalDiSets, sumPractice, acc, topicsFromLogs } from "@/lib/compute";
 import { PLAN_START, MONTHLY_PERCENTILE_TARGET } from "@/lib/planData";
 import { todayStr, monthKeyOf, fmtDateShort } from "@/lib/utils";
 
@@ -114,8 +114,8 @@ export default function MonthlyPage() {
             ))}
           </div>
           <div className="mt-3 text-xs text-slate-400">
-            LR sets this month: <span className="text-lr">{totalLrSets(moLogs)}</span> · Total questions:{" "}
-            {Object.values(p).reduce((s, x) => s + x.attempted, 0)}
+            LR sets: <span className="text-lr">{totalLrSets(moLogs)}</span> · DI sets:{" "}
+            <span className="text-dilr">{totalDiSets(moLogs)}</span> · this month
           </div>
         </Panel>
 

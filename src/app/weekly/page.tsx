@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { jget, jpost } from "@/lib/api";
 import { Panel, Progress, StatCard, Empty, TopicsCovered } from "@/components/Ui";
-import { DailyLog, Mock, ErrLog, inRange, totalHours, totalLrSets, sumPractice, totalRc, totalVa, acc, topicsFromLogs } from "@/lib/compute";
+import { DailyLog, Mock, ErrLog, inRange, totalHours, totalLrSets, totalDiSets, sumPractice, totalRc, totalVa, acc, topicsFromLogs } from "@/lib/compute";
 import { PLAN_START, VOLUME_TARGETS, WEEKLY_HOURS_TARGET, DAILY_HOURS_TARGET } from "@/lib/planData";
 import { todayStr, weekStartOf, addDays, fmtDate, fmtDateShort, phaseForDate, weekNumberOf } from "@/lib/utils";
 
@@ -105,7 +105,7 @@ export default function WeeklyPage() {
         <Panel title={`Volume vs ${phaseId} weekly target`}>
           <div className="space-y-3">
             <Progress label="LR sets" value={totalLrSets(wkLogs)} target={vt.lr} color="#a78bfa" />
-            <Progress label="DI sets" value={p.DI.attempted} target={vt.di} color="#f472b6" />
+            <Progress label="DI sets" value={totalDiSets(wkLogs)} target={vt.di} color="#f472b6" />
             <Progress label="QA questions" value={p.QA.attempted} target={vt.qa} color="#34d399" />
             <Progress label="RC passages" value={totalRc(wkLogs)} target={vt.rc} color="#fbbf24" />
             <Progress label="VA drills" value={totalVa(wkLogs)} target={vt.va} color="#f59e0b" />

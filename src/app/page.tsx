@@ -7,7 +7,7 @@ import {
 import { jget } from "@/lib/api";
 import {
   DailyLog, Mock, ErrLog, studyStreak, totalHours, thisWeek, thisMonth, sumPractice,
-  totalLrSets, totalRc, totalVa, mockChartRows, errorsByCause, acc, inRange,
+  totalLrSets, totalDiSets, totalRc, totalVa, mockChartRows, errorsByCause, acc, inRange,
 } from "@/lib/compute";
 import { StatCard, Panel, Progress, Empty } from "@/components/Ui";
 import {
@@ -244,7 +244,7 @@ export default function Dashboard() {
         <Panel title={`This week's volume vs ${phaseId} target`}>
           <div className="space-y-3">
             <Progress label="LR sets" value={totalLrSets(wk)} target={volTarget.lr} color="#a78bfa" />
-            <Progress label="DI sets" value={wkPractice.DI.attempted} target={volTarget.di} color="#f472b6" />
+            <Progress label="DI sets" value={totalDiSets(wk)} target={volTarget.di} color="#f472b6" />
             <Progress label="QA questions" value={wkPractice.QA.attempted} target={volTarget.qa} color="#34d399" />
             <Progress label="RC passages" value={totalRc(wk)} target={volTarget.rc} color="#fbbf24" />
             <Progress label="VA drills" value={totalVa(wk)} target={volTarget.va} color="#f59e0b" />
