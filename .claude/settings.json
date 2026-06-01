@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(curl -s -o /dev/null -w \"weekly=%{http_code}\\\\n\" http://localhost:3000/weekly)",
+      "Bash(curl -s -o /dev/null -w \"monthly=%{http_code}\\\\n\" http://localhost:3000/monthly)",
+      "Bash(curl -s -o /dev/null -w \"daily=%{http_code}\\\\n\" http://localhost:3000/daily)"
+    ]
+  }
+}
