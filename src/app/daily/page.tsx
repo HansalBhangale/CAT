@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { jget, jpost } from "@/lib/api";
 import { Panel, Tag } from "@/components/Ui";
 import { DAILY_TEMPLATES, DAILY_HOURS_TARGET, PHASES, PLAN_START, blockTag } from "@/lib/planData";
@@ -58,14 +58,25 @@ function num(v: string) {
 export default function DailyPage() {
   const [date, setDate] = useState(todayStr());
   const [day, setDay] = useState<DayState>(blank(todayStr()));
-  const [saved, setSaved] = useState<"idle" | "saving" | "ok" | "err">("idle");
+  const [saved, setSaved] = useState<"idle" | "pending" | "saving" | "ok" | "err">("idle");
   const [msg, setMsg] = useState("");
   const [focus, setFocus] = useState<{ pomodoros: number; focusMinutes: number }>({ pomodoros: 0, focusMinutes: 0 });
   const [history, setHistory] = useState<{ section: string; name: string; date: string }[]>([]);
 
+  // auto-save plumbing
+  const dayRef = useRef(day);
+  const dirtyRef = useRef(false); // unsaved edits present
+  const skipRef = useRef(true); // skip the auto-save triggered by a programmatic load (true on mount)
+  useEffect(() => {
+    dayRef.current = day;
+  }, [day]);
+
   const load = useCallback(async (d: string) => {
     try {
       const data = await jget<DayState | null>(`/api/daily?date=${d}`);
+      skipRef.current = true; // this setDay is programmatic — don't auto-save it
+      dirtyRef.current = false;
+      setSaved("idle");
       if (data) {
         const practice = Object.fromEntries(TAGS.map((t) => [t, data.practice?.[t] || { attempted: 0, correct: 0 }]));
         setDay({ ...blank(d), ...data, practice, topics: data.topics || [] });
@@ -94,12 +105,60 @@ export default function DailyPage() {
     }
   }, []);
 
+  const doSave = useCallback(
+    async (d: DayState) => {
+      setSaved("saving");
+      try {
+        await jpost("/api/daily", { ...d, phase: phaseForDate(d.date) });
+        dirtyRef.current = false;
+        setSaved("ok");
+        setTimeout(() => setSaved((s) => (s === "ok" ? "idle" : s)), 1500);
+      } catch (e: any) {
+        setSaved("err");
+        setMsg(e.message);
+      }
+    },
+    []
+  );
+
+  // Load the day; on date change or unmount, flush any unsaved edits for the day we're leaving.
   useEffect(() => {
     load(date);
-  }, [date, load]);
+    return () => {
+      if (dirtyRef.current) doSave(dayRef.current);
+    };
+  }, [date, load, doSave]);
+
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  // Debounced auto-save on every edit.
+  useEffect(() => {
+    if (skipRef.current) {
+      skipRef.current = false;
+      return;
+    }
+    dirtyRef.current = true;
+    setSaved("pending");
+    const id = setTimeout(() => doSave(dayRef.current), 800);
+    return () => clearTimeout(id);
+  }, [day, doSave]);
+
+  // Last-resort save when the tab is closed/refreshed with unsaved edits.
+  useEffect(() => {
+    const handler = () => {
+      if (!dirtyRef.current) return;
+      try {
+        const body = JSON.stringify({ ...dayRef.current, phase: phaseForDate(dayRef.current.date) });
+        navigator.sendBeacon("/api/daily", new Blob([body], { type: "application/json" }));
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   // section -> (lowercased name -> {count, last, label}); excludes the day currently being edited
   const index = useMemo(() => {
@@ -159,17 +218,11 @@ export default function DailyPage() {
   const delExtra = (i: number) => setDay((d) => ({ ...d, extraWork: d.extraWork.filter((_, idx) => idx !== i) }));
 
   const save = async () => {
-    setSaved("saving");
-    try {
-      await jpost("/api/daily", { ...day, phase: phaseForDate(day.date) });
-      setSaved("ok");
-      await loadHistory();
-      setTimeout(() => setSaved("idle"), 1500);
-    } catch (e: any) {
-      setSaved("err");
-      setMsg(e.message);
-    }
+    await doSave(dayRef.current);
+    loadHistory();
   };
+  const statusText =
+    saved === "saving" ? "Saving…" : saved === "pending" ? "Unsaved…" : saved === "ok" ? "Saved ✓" : saved === "err" ? "Save failed" : "All changes saved";
 
   const phase = PHASES.find((p) => p.id === phaseForDate(date))!;
   const template = DAILY_TEMPLATES[phase.id];
@@ -205,8 +258,18 @@ export default function DailyPage() {
         </div>
         <div className="flex items-center gap-2">
           {msg && <span className="text-xs text-rose-300">{msg}</span>}
+          <span
+            className={`flex items-center gap-1.5 text-xs ${
+              saved === "err" ? "text-rose-300" : saved === "pending" || saved === "saving" ? "text-amber-300" : "text-emerald-300"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${saved === "pending" || saved === "saving" ? "animate-pulse bg-amber-400" : saved === "err" ? "bg-rose-400" : "bg-emerald-400"}`}
+            />
+            {statusText}
+          </span>
           <button className="btn" onClick={save} disabled={saved === "saving"}>
-            {saved === "saving" ? "Saving…" : saved === "ok" ? "Saved ✓" : "Save day"}
+            Save now
           </button>
         </div>
       </div>
@@ -405,10 +468,9 @@ export default function DailyPage() {
       <Panel title="Notes / one-line takeaway">
         <textarea className="textarea h-24" placeholder="What worked, what to fix tomorrow…"
           value={day.notes} onChange={(e) => set({ notes: e.target.value })} />
-        <div className="mt-3 flex justify-end">
-          <button className="btn" onClick={save} disabled={saved === "saving"}>
-            {saved === "saving" ? "Saving…" : saved === "ok" ? "Saved ✓" : "Save day"}
-          </button>
+        <div className="mt-3 flex items-center justify-end gap-3">
+          <span className="text-xs text-slate-400">{statusText} · edits save automatically</span>
+          <button className="btn" onClick={save} disabled={saved === "saving"}>Save now</button>
         </div>
       </Panel>
     </div>
