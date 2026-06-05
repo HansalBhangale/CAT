@@ -75,6 +75,7 @@ export default function TimerPage() {
   const [hydrated, setHydrated] = useState(false);
   const tickRef = useRef<any>(null);
   const completingRef = useRef(false);
+  const cycleDayRef = useRef(todayStr()); // the day the long-break cycle belongs to
 
   const durFor = useCallback((m: Mode, s: Settings) => (m === "focus" ? s.focus : m === "short" ? s.short : s.long) * 60, []);
 
@@ -93,8 +94,10 @@ export default function TimerPage() {
     setSettings(s);
     const st = loadLS<any>(STATE, null as any);
     if (st && st.mode) {
+      const sameDay = st.day === todayStr();
       setMode(st.mode);
-      setCycle(st.cycle || 0);
+      setCycle(sameDay ? st.cycle || 0 : 0); // reset the long-break cycle on a new day
+      cycleDayRef.current = todayStr();
       setCategory(st.category || "LR");
       if (st.running && st.endsAt && st.endsAt > Date.now()) {
         setRunning(true);
@@ -120,7 +123,7 @@ export default function TimerPage() {
   // persist runtime state
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STATE, JSON.stringify({ mode, running, endsAt, remaining, cycle, category }));
+    localStorage.setItem(STATE, JSON.stringify({ mode, running, endsAt, remaining, cycle, category, day: cycleDayRef.current }));
   }, [mode, running, endsAt, remaining, cycle, category, hydrated]);
 
   const total = durFor(mode, settings);
@@ -159,7 +162,10 @@ export default function TimerPage() {
     const wasFocus = mode === "focus";
     let newCycle = cycle;
     if (wasFocus) {
-      newCycle = cycle + 1;
+      const today = todayStr();
+      // a focus session finishing on a new day restarts the long-break cycle
+      newCycle = cycleDayRef.current === today ? cycle + 1 : 1;
+      cycleDayRef.current = today;
       setCycle(newCycle);
       if (settings.autoLog) {
         try {
