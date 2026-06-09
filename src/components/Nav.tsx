@@ -10,6 +10,7 @@ const links = [
   { href: "/timer", label: "Timer" },
   { href: "/topics", label: "Topics" },
   { href: "/mocks", label: "Mocks" },
+  { href: "/sectionals", label: "Sectionals" },
   { href: "/errors", label: "Error Log" },
   { href: "/weekly", label: "Weekly" },
   { href: "/monthly", label: "Monthly" },
