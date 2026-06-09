@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
 } from "recharts";
 import { jget, jpost, jdelete } from "@/lib/api";
 import { Panel, Empty, StatCard, Tag } from "@/components/Ui";
@@ -77,11 +77,6 @@ export default function SectionalsPage() {
   };
 
   const chapters = useMemo(() => Array.from(new Set(tests.map((t) => t.chapter))).sort(), [tests]);
-
-  const trend = useMemo(
-    () => tests.map((t) => ({ label: fmtDateShort(t.date), percentile: t.percentile, marks: t.marks, chapter: t.chapter })),
-    [tests]
-  );
 
   // average percentile per chapter (weak-chapter finder)
   const byChapter = useMemo(() => {
@@ -175,38 +170,23 @@ export default function SectionalsPage() {
         </Panel>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Panel title="Percentile trend">
-          {trend.length === 0 ? <Empty>No tests yet.</Empty> : (
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={trend} margin={{ left: -10, right: 10, top: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e2740" />
-                <XAxis dataKey="label" {...axis} /><YAxis domain={[0, 100]} {...axis} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="percentile" name="%ile" stroke="#5b8cff" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
-        <Panel title="Avg %ile by chapter — weakest first">
-          {byChapter.length === 0 ? <Empty>Log tests to spot weak chapters.</Empty> : (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={byChapter.slice(0, 10)} layout="vertical" margin={{ left: 20, right: 10, top: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e2740" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} {...axis} />
-                <YAxis type="category" dataKey="chapter" width={110} {...axis} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="avg" name="avg %ile" radius={[0, 4, 4, 0]}>
-                  {byChapter.slice(0, 10).map((c, i) => (
-                    <Cell key={i} fill={c.avg >= 90 ? "#34d399" : c.avg >= 75 ? "#fbbf24" : "#fb7185"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-      </div>
+      <Panel title="Avg %ile by chapter — weakest first" right={<span className="text-xs text-slate-500">compare lessons · red &lt;75 · amber 75–90 · green ≥90</span>}>
+        {byChapter.length === 0 ? <Empty>Log tests to compare chapters and spot weak ones.</Empty> : (
+          <ResponsiveContainer width="100%" height={Math.max(220, byChapter.length * 34)}>
+            <BarChart data={byChapter} layout="vertical" margin={{ left: 20, right: 16, top: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e2740" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} {...axis} />
+              <YAxis type="category" dataKey="chapter" width={150} {...axis} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any, _n, p: any) => [`${v} %ile (${p.payload.n} test${p.payload.n > 1 ? "s" : ""}, best ${p.payload.best})`, p.payload.chapter]} />
+              <Bar dataKey="avg" name="avg %ile" radius={[0, 4, 4, 0]}>
+                {byChapter.map((c, i) => (
+                  <Cell key={i} fill={c.avg >= 90 ? "#34d399" : c.avg >= 75 ? "#fbbf24" : "#fb7185"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Panel>
 
       <Panel
         title="All sectional tests"
